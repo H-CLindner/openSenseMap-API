@@ -64,6 +64,12 @@ To push a new Version to gh-pages run:
 git subtree push --prefix doc/ origin gh-pages
 ```
 
+### Contributing
+
+[![js-standard-style](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
+
+See [CONTRIBUTING.md](/CONTRIBUTING.md) for instructions on how to contribute to the OpenSenseMap-API.
+
 ### License
 
 [MIT](license.md) - Matthias Pfeil 2015
