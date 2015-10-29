@@ -1,4 +1,4 @@
-OpenSenseMap-API
+OpenSenseMap-API [![Build Status](https://travis-ci.org/sensebox/OpenSenseMap-API.svg)](https://travis-ci.org/sensebox/OpenSenseMap-API)
 ================
 This is the back-end for [OpenSenseMap](http://opensensemap.org).
 
