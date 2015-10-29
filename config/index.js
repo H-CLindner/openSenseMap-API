@@ -1,15 +1,4 @@
-exports.targetFolder = '/var/OpenSenseMap-API/usersketches/';
-exports.imageFolder = '/var/www/OpenSenseMap/app/userimages/';
-exports.dbuser = '';
-exports.dbuserpass = '';
+var env = process.env.NODE_ENV || 'development'
+var cfg = require('./config.' + env)
 
-exports.email = {};
-exports.email.host = '';
-exports.email.port = 465;
-exports.email.secure = true;
-exports.email.user = '';
-exports.email.pass = '';
-exports.email.fromName = '';
-exports.email.fromEmail = '';
-exports.email.replyTo = '';
-exports.email.subject = '';
+module.exports = cfg
