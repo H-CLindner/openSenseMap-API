@@ -26,16 +26,18 @@
   },
   "scripts": {
     "start": "node app.js",
-    "test": "standard --verbose | snazzy"
+    "test": "standard --verbose | snazzy",
+    "db-local": "mongod --dbpath db",
+    "watch-local": "npm run db-local"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mpfeil/OpenSenseMap-API.git"
+    "url": "https://github.com/sensebox/OpenSenseMap-API.git"
   },
   "author": "Matthias Pfeil",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mpfeil/OpenSenseMap-API/issues"
+    "url": "https://github.com/sensebox/OpenSenseMap-API/issues"
   },
   "homepage": "https://github.com/mpfeil/OpenSenseMap-API",
   "apidoc": {
