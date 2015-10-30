@@ -10,24 +10,24 @@ var restify = require('restify'),
   Stream = require('stream'),
   nodemailer = require('nodemailer'),
   smtpTransport = require('nodemailer-smtp-transport'),
-  htmlToText = require('nodemailer-html-to-text').htmlToText;
+  htmlToText = require('nodemailer-html-to-text').htmlToText
 
-var dbHost = process.env.DB_HOST || "db";
+var dbHost = process.env.DB_HOST || 'db'
 
 /*
   Logging
 */
-var consoleStream = new Stream();
-consoleStream.writable = true;
-consoleStream.write = function(obj) {
-  if(obj.req){
-    console.log(obj.time, obj.req.remoteAddress, obj.req.method, obj.req.url);
-  } else if(obj.msg) {
-    console.log(obj.time, obj.msg);
+var consoleStream = new Stream()
+consoleStream.writable = true
+consoleStream.write = function (obj) {
+  if (obj.req) {
+    console.log(obj.time, obj.req.remoteAddress, obj.req.method, obj.req.url)
+  } else if (obj.msg) {
+    console.log(obj.time, obj.msg)
   } else {
-    //console.log(obj.time, obj);
+    // console.log(obj.time, obj)
   }
-};
+}
 
 var Logger = require('bunyan'),
   reqlog = new Logger.createLogger({
@@ -53,47 +53,47 @@ var Logger = require('bunyan'),
       req: Logger.stdSerializers.req,
       res: Logger.stdSerializers.res
     }
-  });
+  })
 
 var server = restify.createServer({
   name: 'opensensemap-api',
   version: '0.0.1',
   log: reqlog
-});
-server.use(restify.CORS({'origins': ['*'] })); //['http://localhost', 'https://opensensemap.org']}));
-server.use(restify.fullResponse());
-server.use(restify.queryParser());
-server.use(restify.bodyParser());
+})
+server.use(restify.CORS({'origins': ['*'] })); // ['http://localhost', 'https://opensensemap.org']}))
+server.use(restify.fullResponse())
+server.use(restify.queryParser())
+server.use(restify.bodyParser())
 
 // use this function to retry if a connection cannot be established immediately
 var connectWithRetry = function () {
-  return mongoose.connect("mongodb://" + dbHost + "/OSeM-api", {
+  return mongoose.connect('mongodb://' + dbHost + '/OSeM-api', {
     keepAlive: 1
   }, function (err) {
     if (err) {
-      console.error('Failed to connect to mongo on startup - retrying in 5 sec', err);
-      setTimeout(connectWithRetry, 5000);
+      console.error('Failed to connect to mongo on startup - retrying in 5 sec', err)
+      setTimeout(connectWithRetry, 5000)
     }
-  });
-};
+  })
+}
 
-conn = connectWithRetry();
+conn = connectWithRetry()
 
 var Schema = mongoose.Schema,
-  ObjectId = Schema.ObjectID;
+  ObjectId = Schema.ObjectID
 
-//Location schema
+// Location schema
 var LocationSchema = new Schema({
   type: {
     type: String,
     required: true,
-    default: "Feature"
+    default: 'Feature'
   },
   geometry: {
     type: {
       type: String,
       required: true,
-      default:"Point"
+      default: 'Point'
     },
     coordinates: {
       type: Array,
@@ -101,9 +101,9 @@ var LocationSchema = new Schema({
     }
   },
   properties: Schema.Types.Mixed
-});
+})
 
-LocationSchema.index({ 'geometry' : '2dsphere' });
+LocationSchema.index({ 'geometry': '2dsphere' })
 
 var measurementSchema = new Schema({
   value: {
@@ -115,11 +115,11 @@ var measurementSchema = new Schema({
     ref: 'Sensor',
     required: true
   }
-});
+})
 
-measurementSchema.plugin(timestamp);
+measurementSchema.plugin(timestamp)
 
-//Sensor schema
+// Sensor schema
 var sensorSchema = new Schema({
   title: {
     type: String,
@@ -140,9 +140,9 @@ var sensorSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Measurement'
   }
-});
+})
 
-//SenseBox schema
+// SenseBox schema
 var boxSchema = new Schema({
   name: {
     type: String,
@@ -170,7 +170,7 @@ var boxSchema = new Schema({
     required: false
   },
   sensors: [sensorSchema]
-},{ strict: false });
+}, { strict: false })
 
 var userSchema = new Schema({
   firstname: {
@@ -198,52 +198,52 @@ var userSchema = new Schema({
       trim: true
     }
   ]
-});
+})
 
-var Measurement = mongoose.model('Measurement', measurementSchema);
-var Box = mongoose.model('Box', boxSchema);
-var Sensor = mongoose.model('Sensor', sensorSchema);
-var User = mongoose.model('User', userSchema);
+var Measurement = mongoose.model('Measurement', measurementSchema)
+var Box = mongoose.model('Box', boxSchema)
+var Sensor = mongoose.model('Sensor', sensorSchema)
+var User = mongoose.model('User', userSchema)
 
-var PATH = '/boxes';
-var userPATH = 'users';
+var PATH = '/boxes'
+var userPATH = 'users'
 
-server.pre(function (request,response,next) {
-  request.log.info({req: request}, 'REQUEST');
-  next();
-});
+server.pre(function (request, response, next) {
+  request.log.info({req: request}, 'REQUEST')
+  next()
+})
 
-server.get({path : PATH , version : '0.0.1'} , findAllBoxes);
-server.get({path : /(boxes)\.([a-z]+)/, version : '0.0.1'} , findAllBoxes);
-server.get({path : PATH +'/:boxId' , version : '0.0.1'} , findBox);
-server.get({path : PATH +'/:boxId/sensors', version : '0.0.1'}, getMeasurements);
-server.get({path : PATH +'/:boxId/data/:sensorId', version : '0.0.1'}, getData);
+server.get({path: PATH,  version: '0.0.1'} , findAllBoxes)
+server.get({path: /(boxes)\.([a-z]+)/, version: '0.0.1'} , findAllBoxes)
+server.get({path: PATH + '/:boxId',  version: '0.0.1'} , findBox)
+server.get({path: PATH + '/:boxId/sensors', version: '0.0.1'}, getMeasurements)
+server.get({path: PATH + '/:boxId/data/:sensorId', version: '0.0.1'}, getData)
 
-server.post({path : PATH , version: '0.0.1'} ,postNewBox);
-server.post({path : PATH +'/:boxId/:sensorId' , version : '0.0.1'}, postNewMeasurement);
+server.post({path: PATH,  version: '0.0.1'} , postNewBox)
+server.post({path: PATH + '/:boxId/:sensorId',  version: '0.0.1'}, postNewMeasurement)
 
-server.put({path: PATH + '/:boxId' , version: '0.0.1'} , updateBox);
+server.put({path: PATH + '/:boxId',  version: '0.0.1'} , updateBox)
 
-server.get({path : userPATH +'/:boxId', version : '0.0.1'}, validApiKey);
+server.get({path: userPATH + '/:boxId', version: '0.0.1'}, validApiKey)
 
-function unknownMethodHandler(req, res) {
+function unknownMethodHandler (req, res) {
   if (req.method.toLowerCase() === 'options') {
     var allowHeaders = ['Accept', 'X-ApiKey', 'Accept-Version', 'Content-Type', 'Api-Version', 'Origin', 'X-Requested-With']; // added Origin & X-Requested-With
 
-    if (res.methods.indexOf('OPTIONS') === -1) res.methods.push('OPTIONS');
+    if (res.methods.indexOf('OPTIONS') === -1) res.methods.push('OPTIONS')
 
-    res.header('Access-Control-Allow-Credentials', true);
-    res.header('Access-Control-Allow-Headers', allowHeaders.join(', '));
-    res.header('Access-Control-Allow-Methods', res.methods.join(', '));
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Credentials', true)
+    res.header('Access-Control-Allow-Headers', allowHeaders.join(', '))
+    res.header('Access-Control-Allow-Methods', res.methods.join(', '))
+    res.header('Access-Control-Allow-Origin', req.headers.origin)
 
-    return res.send(204);
+    return res.send(204)
   }
   else
-    return res.send(new restify.MethodNotAllowedError());
+    return res.send(new restify.MethodNotAllowedError())
 }
 
-server.on('MethodNotAllowed', unknownMethodHandler);
+server.on('MethodNotAllowed', unknownMethodHandler)
 
 /**
  * @api {get} /boxes/users/:boxId Check for valid API key
@@ -261,32 +261,32 @@ server.on('MethodNotAllowed', unknownMethodHandler);
  * @apiGroup Boxes
  * @apiName updateBox
  */
-function validApiKey (req,res,next) {
-  User.findOne({apikey:req.headers['x-apikey']}, function (error, user) {
+function validApiKey (req, res, next) {
+  User.findOne({apikey: req.headers['x-apikey']}, function (error, user) {
     if (error) {
-      res.send(400, 'ApiKey not existing!');
+      res.send(400, 'ApiKey not existing!')
     }
 
     if (user.boxes.indexOf(req.params.boxId) != -1) {
-      res.send(200,'ApiKey is valid!');
+      res.send(200, 'ApiKey is valid!')
     } else {
-      res.send(400,'ApiKey is invalid!');
+      res.send(400, 'ApiKey is invalid!')
     }
-  });
+  })
 }
 
-function decodeBase64Image(dataString) {
+function decodeBase64Image (dataString) {
   var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-    response = {};
+    response = {}
 
   if (matches.length !== 3) {
-    return new Error('Invalid input string');
+    return new Error('Invalid input string')
   }
 
-  response.type = matches[1];
-  response.data = new Buffer(matches[2], 'base64');
+  response.type = matches[1]
+  response.data = new Buffer(matches[2], 'base64')
 
-  return response;
+  return response
 }
 
 /**
@@ -302,41 +302,41 @@ function decodeBase64Image(dataString) {
  * @apiGroup Boxes
  * @apiName updateBox
  */
-function updateBox(req, res, next) {
-  User.findOne({apikey:req.headers["x-apikey"]}, function (error, user) {
+function updateBox (req, res, next) {
+  User.findOne({apikey: req.headers['x-apikey']}, function (error, user) {
     if (error) {
-      res.send(400, 'ApiKey not existing!');
+      res.send(400, 'ApiKey not existing!')
     }
     if (user.boxes.indexOf(req.params.boxId) !== -1) {
       Box.findById(req.params.boxId, function (err, box) {
-        if (err) return handleError(err);
-        log.debug(req.params);
+        if (err) return handleError(err)
+        log.debug(req.params)
         if (req.params.tmpSensorName !== undefined) {
-          box.set({name: req.params.tmpSensorName});
+          box.set({name: req.params.tmpSensorName})
         }
         if (req.params.image !== undefined) {
-          var data = req.params.image.toString();
-          var imageBuffer = decodeBase64Image(data);
-          fs.writeFile(cfg.imageFolder+""+req.params.boxId+'.jpeg', imageBuffer.data, function(err){
-            if (err) return new Error(err);
-            box.set({image:req.params.boxId+'.jpeg'});
+          var data = req.params.image.toString()
+          var imageBuffer = decodeBase64Image(data)
+          fs.writeFile(cfg.imageFolder + '' + req.params.boxId + '.jpeg', imageBuffer.data, function (err) {
+            if (err) return new Error(err)
+            box.set({image: req.params.boxId + '.jpeg'})
             box.save(function (err) {
-              if (err) return handleError(err);
-              res.send(box);
-            });
-          });
+              if (err) return handleError(err)
+              res.send(box)
+            })
+          })
         } else {
-          box.set({image:""});
+          box.set({image: ''})
         }
         box.save(function (err) {
-          if (err) return handleError(err);
-          res.send(box);
-        });
-      });
+          if (err) return handleError(err)
+          res.send(box)
+        })
+      })
     } else {
-     res.send(400, 'ApiKey does not match SenseBoxID');
+      res.send(400, 'ApiKey does not match SenseBoxID')
     }
-  });
+  })
 }
 
 /**
@@ -347,14 +347,14 @@ function updateBox(req, res, next) {
  * @apiName getMeasurements
  * @apiParam {ID} boxId SenseBox unique ID.
  */
-function getMeasurements(req, res, next) {
-  Box.findOne({_id: req.params.boxId},{sensors:1}).populate('sensors.lastMeasurement').exec(function(error,sensors){
+function getMeasurements (req, res, next) {
+  Box.findOne({_id: req.params.boxId}, {sensors: 1}).populate('sensors.lastMeasurement').exec(function (error, sensors) {
     if (error) {
-      return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+      return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
     } else {
-      res.send(201,sensors);
+      res.send(201, sensors)
     }
-  });
+  })
 }
 
 /**
@@ -370,73 +370,72 @@ function getMeasurements(req, res, next) {
  * @apiParam {String} download If set, offer download to the user (default: false, always on if CSV is used)
  * @apiParam {String} format Can be 'JSON' (default) or 'CSV' (default: JSON)
  */
-function getData(req, res, next) {
+function getData (req, res, next) {
   // default to now
-  var toDate = (typeof req.params["to-date"] == 'undefined' || req.params["to-date"] == "") ? new Date() : new Date(req.params["to-date"]);
+  var toDate = (typeof req.params['to-date'] == 'undefined' || req.params['to-date'] == '') ? new Date() : new Date(req.params['to-date'])
   // default to 24 hours earlier
-  var fromDate = (typeof req.params["from-date"] == 'undefined' || req.params["from-date"] == "") ? new Date(toDate.valueOf() - 1000*60*60*24*15) : new Date(req.params["from-date"]);
-  var format = (typeof req.params["format"] == 'undefined') ? "json" : req.params["format"].toLowerCase();
+  var fromDate = (typeof req.params['from-date'] == 'undefined' || req.params['from-date'] == '') ? new Date(toDate.valueOf() - 1000 * 60 * 60 * 24 * 15) : new Date(req.params['from-date'])
+  var format = (typeof req.params['format'] == 'undefined') ? 'json' : req.params['format'].toLowerCase()
 
-  log.debug(fromDate, "to", toDate);
+  log.debug(fromDate, 'to', toDate)
 
   if (toDate.valueOf() < fromDate.valueOf()) {
-    return next(new restify.InvalidArgumentError(JSON.stringify('Invalid time frame specified')));
+    return next(new restify.InvalidArgumentError(JSON.stringify('Invalid time frame specified')))
   }
-  if (toDate.valueOf()-fromDate.valueOf() > 1000*60*60*24*32) {
-    return next(new restify.InvalidArgumentError(JSON.stringify('Please choose a time frame up to 31 days maximum')));
+  if (toDate.valueOf() - fromDate.valueOf() > 1000 * 60 * 60 * 24 * 32) {
+    return next(new restify.InvalidArgumentError(JSON.stringify('Please choose a time frame up to 31 days maximum')))
   }
 
-  var queryLimit = 100000;
-  var resultLimit = 1000;
+  var queryLimit = 100000
+  var resultLimit = 1000
 
   Measurement.find({
-      sensor_id: req.params.sensorId,
-      createdAt: { $gte: new Date(fromDate), $lte: new Date(toDate) }
-    },{"createdAt":1, "value":1, "_id": 0}) // do not send _id column
-  .limit(queryLimit)
-  .lean()
-  .exec(function(error,sensorData){
-    if (error) {
-      return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
-    } else {
-      // only return every nth element
-      // TODO: equally distribute data over time instead
-      if(sensorData.length > resultLimit) {
-        var limitedResult = [];
-        var returnEveryN = Math.ceil(sensorData.length/resultLimit);
-        log.info("returnEveryN ", returnEveryN);
-        log.info("old sensorData length:", sensorData.length);
-        for(var i=0; i<sensorData.length; i++) {
-          if(i%returnEveryN == 0) {
-            limitedResult.push( sensorData[i] )
-          }
-        }
-        sensorData = limitedResult;
-        log.info("new sensorData length:", sensorData.length);
-      }
-
-      if(typeof req.params["download"] != 'undefined' && req.params["download"]=="true"){
-        // offer download to browser
-        res.header('Content-Disposition', 'attachment; filename='+req.params.sensorId+'.'+format);
-      }
-
-      if(format == "csv") {
-        // send CSV
-        json2csv({data: sensorData, fields: ['createdAt', 'value']}, function(err, csv) {
-          if (err) log.error(err);
-          res.header('Content-Type', 'text/csv');
-          res.header('Content-Disposition', 'attachment; filename='+req.params.sensorId+'.csv');
-          res.send(201, csv);
-        });
+    sensor_id: req.params.sensorId,
+    createdAt: { $gte: new Date(fromDate), $lte: new Date(toDate) }
+  }, {'createdAt': 1, 'value': 1, '_id': 0}) // do not send _id column
+    .limit(queryLimit)
+    .lean()
+    .exec(function (error, sensorData) {
+      if (error) {
+        return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
       } else {
-        // send JSON
-        res.send(201,sensorData);
+        // only return every nth element
+        // TODO: equally distribute data over time instead
+        if (sensorData.length > resultLimit) {
+          var limitedResult = []
+          var returnEveryN = Math.ceil(sensorData.length / resultLimit)
+          log.info('returnEveryN ', returnEveryN)
+          log.info('old sensorData length:', sensorData.length)
+          for (var i = 0; i < sensorData.length; i++) {
+            if (i % returnEveryN == 0) {
+              limitedResult.push(sensorData[i])
+            }
+          }
+          sensorData = limitedResult
+          log.info('new sensorData length:', sensorData.length)
+        }
+
+        if (typeof req.params['download'] != 'undefined' && req.params['download'] == 'true') {
+          // offer download to browser
+          res.header('Content-Disposition', 'attachment; filename=' + req.params.sensorId + '.' + format)
+        }
+
+        if (format == 'csv') {
+          // send CSV
+          json2csv({data: sensorData, fields: ['createdAt', 'value']}, function (err, csv) {
+            if (err) log.error(err)
+            res.header('Content-Type', 'text/csv')
+            res.header('Content-Disposition', 'attachment; filename=' + req.params.sensorId + '.csv')
+            res.send(201, csv)
+          })
+        } else {
+          // send JSON
+          res.send(201, sensorData)
+        }
+
       }
-
-    }
-  });
+    })
 }
-
 
 /**
  * @api {post} /boxes/:boxId/:sensorId Post new measurement
@@ -447,42 +446,41 @@ function getData(req, res, next) {
  * @apiParam {ID} boxId SenseBox unique ID.
  * @apiParam {ID} sensorId Sensors unique ID.
  */
-function postNewMeasurement(req, res, next) {
-  Box.findOne({_id: req.params.boxId}, function(error,box){
+function postNewMeasurement (req, res, next) {
+  Box.findOne({_id: req.params.boxId}, function (error, box) {
     if (error) {
-      return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+      return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
     } else {
       for (var i = box.sensors.length - 1; i >= 0; i--) {
         if (box.sensors[i]._id.equals(req.params.sensorId)) {
-
           var measurementData = {
             value: req.params.value,
             _id: mongoose.Types.ObjectId(),
             sensor_id: req.params.sensorId
-          };
+          }
 
-          var measurement = new Measurement(measurementData);
+          var measurement = new Measurement(measurementData)
 
-          box.sensors[i].lastMeasurement = measurement._id;
-          box.save(function(error,data){
+          box.sensors[i].lastMeasurement = measurement._id
+          box.save(function (error, data) {
             if (error) {
-              return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+              return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
             } else {
-              res.send(201,'measurement saved in box');
+              res.send(201, 'measurement saved in box')
             }
-          });
+          })
 
-          measurement.save(function(error, data, box){
+          measurement.save(function (error, data, box) {
             if (error) {
-              return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+              return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
             } else {
-              res.send(201,measurement);
+              res.send(201, measurement)
             }
-          });
+          })
         }
-      };
+      }
     }
-  });
+  })
 }
 
 /**
@@ -492,24 +490,24 @@ function postNewMeasurement(req, res, next) {
  * @apiVersion 0.0.1
  * @apiSampleRequest http://opensensemap.org:8000/boxes
  */
-function findAllBoxes(req, res , next){
-  Box.find({}).populate('sensors.lastMeasurement').exec(function(err,boxes){
-    if (req.params[1] === "json" || req.params[1] === undefined) {
-      res.send(boxes);
-    } else if (req.params[1] === "geojson") {
-      tmp = JSON.stringify(boxes);
-      tmp = JSON.parse(tmp);
-      var geojson = _.transform(tmp, function(result, n) {
-        lat = n.loc[0].geometry.coordinates[1];
-        lng = n.loc[0].geometry.coordinates[0];
-        delete n["loc"];
-        n["lat"] = lat;
-        n["lng"] = lng;
-        return result.push(n);
-      });
-      res.send(GeoJSON.parse(geojson, {Point: ['lat','lng']}));
+function findAllBoxes (req, res , next) {
+  Box.find({}).populate('sensors.lastMeasurement').exec(function (err, boxes) {
+    if (req.params[1] === 'json' || req.params[1] === undefined) {
+      res.send(boxes)
+    } else if (req.params[1] === 'geojson') {
+      tmp = JSON.stringify(boxes)
+      tmp = JSON.parse(tmp)
+      var geojson = _.transform(tmp, function (result, n) {
+        lat = n.loc[0].geometry.coordinates[1]
+        lng = n.loc[0].geometry.coordinates[0]
+        delete n['loc']
+        n['lat'] = lat
+        n['lng'] = lng
+        return result.push(n)
+      })
+      res.send(GeoJSON.parse(geojson, {Point: ['lat', 'lng']}))
     }
-  });
+  })
 }
 
 /**
@@ -558,32 +556,32 @@ function findAllBoxes(req, res , next){
   ]
 }
  */
-function findBox(req, res, next) {
-  id = req.params.boxId.split(".")[0];
-  format = req.params.boxId.split(".")[1];
+function findBox (req, res, next) {
+  id = req.params.boxId.split('.')[0]
+  format = req.params.boxId.split('.')[1]
   if (isEmptyObject(req.query)) {
-    Box.findOne({_id: id}).populate('sensors.lastMeasurement').exec(function(error,box){
-      if (error) return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+    Box.findOne({_id: id}).populate('sensors.lastMeasurement').exec(function (error, box) {
+      if (error) return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
       if (box) {
-        if (format === "json" || format === undefined) {
-          res.send(box);
-        } else if (format === "geojson") {
-          tmp = JSON.stringify(box);
-          tmp = JSON.parse(tmp);
-          lat = tmp.loc[0].geometry.coordinates[1];
-          lng = tmp.loc[0].geometry.coordinates[0];
-          delete tmp["loc"];
-          tmp["lat"] = lat;
-          tmp["lng"] = lng;
-          geojson = [tmp];
-          res.send(GeoJSON.parse(geojson, {Point: ['lat','lng']}));
+        if (format === 'json' || format === undefined) {
+          res.send(box)
+        } else if (format === 'geojson') {
+          tmp = JSON.stringify(box)
+          tmp = JSON.parse(tmp)
+          lat = tmp.loc[0].geometry.coordinates[1]
+          lng = tmp.loc[0].geometry.coordinates[0]
+          delete tmp['loc']
+          tmp['lat'] = lat
+          tmp['lng'] = lng
+          geojson = [tmp]
+          res.send(GeoJSON.parse(geojson, {Point: ['lat', 'lng']}))
         }
       } else {
-        res.send(404);
+        res.send(404)
       }
-    });
-  } else{
-    res.send(box);
+    })
+  } else {
+    res.send(box)
   }
 }
 
@@ -596,9 +594,9 @@ function createNewUser (req) {
     boxes: []
   }
 
-  var user = new User(userData);
+  var user = new User(userData)
 
-  return user;
+  return user
 }
 
 function createNewBox (req) {
@@ -610,37 +608,37 @@ function createNewBox (req) {
     exposure: req.params.exposure,
     _id: mongoose.Types.ObjectId(),
     sensors: []
-  };
+  }
 
-  var box = new Box(boxData);
+  var box = new Box(boxData)
 
   if (req.params.model) {
-    switch(req.params.model){
+    switch (req.params.model) {
       case 'homeEthernet':
-        req.params.sensors = products.senseboxhome;
-        break;
+        req.params.sensors = products.senseboxhome
+        break
       case 'basicEthernet':
-        req.params.sensors = products.senseboxbasic;
-        break;
+        req.params.sensors = products.senseboxbasic
+        break
       default:
-        break;
+        break
     }
   }
 
   for (var i = req.params.sensors.length - 1; i >= 0; i--) {
-    var id = mongoose.Types.ObjectId();
+    var id = mongoose.Types.ObjectId()
 
     var sensorData = {
       _id: id,
       title: req.params.sensors[i].title,
       unit: req.params.sensors[i].unit,
       sensorType: req.params.sensors[i].sensorType,
-    };
+    }
 
-    box.sensors.push(sensorData);
-  };
+    box.sensors.push(sensorData)
+  }
 
-  return box;
+  return box
 }
 
 /**
@@ -650,115 +648,113 @@ function createNewBox (req) {
  * @apiGroup Boxes
  * @apiName postNewBox
  */
-function postNewBox(req, res, next) {
-  User.findOne({apikey:req.params.orderID}, function (err, user) {
+function postNewBox (req, res, next) {
+  User.findOne({apikey: req.params.orderID}, function (err, user) {
     if (err) {
-      log.error(err);
-      return res.send(500);
+      log.error(err)
+      return res.send(500)
     } else {
-
-      log.debug("A new sensebox is being submitted");
-      //log.debug(req.params);
+      log.debug('A new sensebox is being submitted')
+      // log.debug(req.params)
       if (!user) {
-        var newUser = createNewUser(req);
-        var newBox = createNewBox(req);
-        var savedBox = {};
+        var newUser = createNewUser(req)
+        var newBox = createNewBox(req)
+        var savedBox = {}
 
-        newUser._doc.boxes.push(newBox._doc._id.toString());
-        newBox.save( function (err, box) {
+        newUser._doc.boxes.push(newBox._doc._id.toString())
+        newBox.save(function (err, box) {
           if (err) {
-            return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+            return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
           }
 
-          switch(req.params.model){
+          switch (req.params.model) {
             case 'homeEthernet':
-              filename = "files/template_home/template_home.ino";
-              break;
+              filename = 'files/template_home/template_home.ino'
+              break
             case 'basicEthernet':
-              filename = "files/template_basic/template_basic.ino";
-              break;
+              filename = 'files/template_basic/template_basic.ino'
+              break
             default:
-              filename = "files/template_custom_setup/template_custom_setup.ino";
-              break;
+              filename = 'files/template_custom_setup/template_custom_setup.ino'
+              break
           }
 
           try {
-            var output = cfg.targetFolder+""+box._id+".ino";
-            log.debug(output);
+            var output = cfg.targetFolder + '' + box._id + '.ino'
+            log.debug(output)
             fs.readFileSync(filename).toString().split('\n').forEach(function (line) {
-              if (line.indexOf("//SenseBox ID") != -1) {
-                fs.appendFileSync(output, line.toString() + "\n");
-                fs.appendFileSync(output, '#define SENSEBOX_ID "'+box._id+'"\n');
-              } else if (line.indexOf("//Sensor IDs") != -1) {
-                fs.appendFileSync(output, line.toString() + "\n");
-                var customSensorindex = 1;
+              if (line.indexOf('//SenseBox ID') != -1) {
+                fs.appendFileSync(output, line.toString() + '\n')
+                fs.appendFileSync(output, '#define SENSEBOX_ID "' + box._id + '"\n')
+              } else if (line.indexOf('//Sensor IDs') != -1) {
+                fs.appendFileSync(output, line.toString() + '\n')
+                var customSensorindex = 1
                 for (var i = box.sensors.length - 1; i >= 0; i--) {
-                  var sensor = box.sensors[i];
-                  log.debug(sensor);
-                  if (sensor.title == "Temperatur") {
-                    fs.appendFileSync(output, '#define TEMPSENSOR_ID "'+sensor._id+'"\n');
-                  } else if(sensor.title == "rel. Luftfeuchte") {
-                    fs.appendFileSync(output, '#define HUMISENSOR_ID "'+sensor._id+'"\n');
-                  } else if(sensor.title == "Luftdruck") {
-                    fs.appendFileSync(output, '#define PRESSURESENSOR_ID "'+sensor._id+'"\n');
-                  } else if(sensor.title == "Lautstärke") {
-                    fs.appendFileSync(output, '#define NOISESENSOR_ID "'+sensor._id+'"\n');
-                  } else if(sensor.title == "Helligkeit") {
-                    fs.appendFileSync(output, '#define LIGHTSENSOR_ID "'+sensor._id+'"\n');
-                  } else if (sensor.title == "Beleuchtungsstärke") {
-                    fs.appendFileSync(output, '#define LUXSENSOR_ID "'+sensor._id+'"\n');
-                  } else if (sensor.title == "UV-Intensität") {
-                    fs.appendFileSync(output, '#define UVSENSOR_ID "'+sensor._id+'"\n');
+                  var sensor = box.sensors[i]
+                  log.debug(sensor)
+                  if (sensor.title == 'Temperatur') {
+                    fs.appendFileSync(output, '#define TEMPSENSOR_ID "' + sensor._id + '"\n')
+                  } else if (sensor.title == 'rel. Luftfeuchte') {
+                    fs.appendFileSync(output, '#define HUMISENSOR_ID "' + sensor._id + '"\n')
+                  } else if (sensor.title == 'Luftdruck') {
+                    fs.appendFileSync(output, '#define PRESSURESENSOR_ID "' + sensor._id + '"\n')
+                  } else if (sensor.title == 'Lautstärke') {
+                    fs.appendFileSync(output, '#define NOISESENSOR_ID "' + sensor._id + '"\n')
+                  } else if (sensor.title == 'Helligkeit') {
+                    fs.appendFileSync(output, '#define LIGHTSENSOR_ID "' + sensor._id + '"\n')
+                  } else if (sensor.title == 'Beleuchtungsstärke') {
+                    fs.appendFileSync(output, '#define LUXSENSOR_ID "' + sensor._id + '"\n')
+                  } else if (sensor.title == 'UV-Intensität') {
+                    fs.appendFileSync(output, '#define UVSENSOR_ID "' + sensor._id + '"\n')
                   } else {
-                    fs.appendFileSync(output, '#define SENSOR'+customSensorindex+'_ID "'+sensor._id+'" \/\/ '+sensor.title+' \n');
-                    customSensorindex++;
+                    fs.appendFileSync(output, '#define SENSOR' + customSensorindex + '_ID "' + sensor._id + '" \/\/ ' + sensor.title + ' \n')
+                    customSensorindex++
                   }
                 }
               } else {
-                fs.appendFileSync(output, line.toString() + "\n");
+                fs.appendFileSync(output, line.toString() + '\n')
               }
-            });
-            savedBox = box;
+            })
+            savedBox = box
 
-            newUser.save( function (err, user) {
+            newUser.save(function (err, user) {
               if (err) {
-                return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)));
+                return next(new restify.InvalidArgumentError(JSON.stringify(error.errors)))
               } else {
-                sendWelcomeMail(user, newBox);
-                return res.send(201, user);
+                sendWelcomeMail(user, newBox)
+                return res.send(201, user)
               }
-            });
+            })
 
           } catch (e) {
-            log.error(e);
-            return res.send(500, JSON.stringify('An error occured'));
+            log.error(e)
+            return res.send(500, JSON.stringify('An error occured'))
           }
 
-
-        });
+        })
       }
     }
-  });
-  next();
+  })
+  next()
 }
 
 // Send box script to user via email
-function sendWelcomeMail(user, box) {
-  var templatePath = './templates/registration.html';
-  var templateContent = fs.readFileSync(templatePath, encoding = 'utf8');
-  var template = _.template(templateContent);
-  var compiled = template({ 'user': user, 'box': box });
+function sendWelcomeMail (user, box) {
+  var templatePath = './templates/registration.html'
+  var templateContent = fs.readFileSync(templatePath, encoding = 'utf8')
+  var template = _.template(templateContent)
+  var compiled = template({ 'user': user, 'box': box })
 
   var transporter = nodemailer.createTransport(smtpTransport({
     host: cfg.email.host,
     port: cfg.email.port,
     secure: cfg.email.secure,
     auth: {
-        user: cfg.email.user,
-        pass: cfg.email.pass
+      user: cfg.email.user,
+      pass: cfg.email.pass
     }
-  }));
-  transporter.use('compile', htmlToText());
+  }))
+  transporter.use('compile', htmlToText())
   transporter.sendMail({
     from: {
       name: cfg.email.fromName,
@@ -769,7 +765,7 @@ function sendWelcomeMail(user, box) {
       address: cfg.email.replyTo
     },
     to: {
-      name: user.firstname+" "+user.lastname,
+      name: user.firstname + ' ' + user.lastname,
       address: user.email
     },
     subject: cfg.email.subject,
@@ -777,30 +773,30 @@ function sendWelcomeMail(user, box) {
     html: compiled,
     attachments: [
       {
-        filename: "sensebox.ino",
-        path: cfg.targetFolder + box._id + ".ino"
+        filename: 'sensebox.ino',
+        path: cfg.targetFolder + box._id + '.ino'
       }
     ]
-  }, function(err, info){
-    if(err){
-      log.error("Email error")
+  }, function (err, info) {
+    if (err) {
+      log.error('Email error')
       log.error(err)
     }
-    if(info){
-      log.debug("Email sent successfully")
+    if (info) {
+      log.debug('Email sent successfully')
     }
-  });
+  })
 }
 
-function isEmptyObject(obj) {
-  return !Object.keys(obj).length;
+function isEmptyObject (obj) {
+  return !Object.keys(obj).length
 }
 
 server.listen(8000, function () {
-  console.log('%s listening at %s', server.name, server.url);
-});
+  console.log('%s listening at %s', server.name, server.url)
+})
 
 server.on('uncaughtException', function (req, res, route, err) {
-  log.error('Uncaught error', err);
-  return res.send(500, JSON.stringify('An error occured'));
-});
+  log.error('Uncaught error', err)
+  return res.send(500, JSON.stringify('An error occured'))
+})

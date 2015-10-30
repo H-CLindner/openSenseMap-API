@@ -1,4 +1,4 @@
-config = {}
+var config = {}
 config.server = {}
 config.mongo = {}
 
