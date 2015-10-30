@@ -1,4 +1,4 @@
-var config = require('.config.global')
+var config = require('./config.global')
 
 // general configuration properties
 config.targetFolder = '/var/OpenSenseMap-API/usersketches/'

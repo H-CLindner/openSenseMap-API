@@ -1,3 +1,3 @@
-var config = require('.config.global')
+var config = require('./config.global')
 
 module.exports = config
