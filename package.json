@@ -15,10 +15,18 @@
     "nodemailer-smtp-transport": "~1.0.3",
     "nodemailer-html-to-text": "~1.0.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "snazzy": "^2.0.1",
+    "standard": "^5.3.1"
+  },
+  "standard": {
+    "ignore": [
+      "doc/"
+    ]
+  },
   "scripts": {
     "start": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard --verbose | snazzy"
   },
   "repository": {
     "type": "git",
