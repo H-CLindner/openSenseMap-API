@@ -28,7 +28,7 @@
   },
   "scripts": {
     "docs": "apidoc -e node_modules/",
-    "start": "node app.js",
+    "start": "nodemon app.js",
     "test": "standard --verbose | snazzy",
     "db-local": "mongod --dbpath db",
     "watch-local": "npm run db-local & (sleep 1 && nodemon app.js)"
