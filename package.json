@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "API for opensensemap.org",
   "main": "app.js",
+  "engines": {
+  	"node": ">=0.10.0"
+  }
   "dependencies": {
     "bunyan": "^1.3.3",
     "geojson": "^0.2.0",
